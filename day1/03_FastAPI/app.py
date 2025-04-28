@@ -169,13 +169,17 @@ async def generate_simple(request: SimpleGenerationRequest):
             raise HTTPException(status_code=503, detail="モデルが利用できません。後でもう一度お試しください。")
 
     try:
+        # 日本語での応答を促すプロンプトを追加
+        system_instruction = "あなたは日本語のAIアシスタントです。以下の入力に日本語で応答してください：\n"
+        final_prompt = system_instruction + request.prompt
+
         start_time = time.time()
-        print(f"シンプルなリクエストを受信: prompt={request.prompt[:100]}..., max_new_tokens={request.max_new_tokens}")  # 長いプロンプトは切り捨て
+        print(f"シンプルなリクエストを受信: prompt={final_prompt[:100]}..., max_new_tokens={request.max_new_tokens}")  # 長いプロンプトは切り捨て
 
         # プロンプトテキストで直接応答を生成
         print("モデル推論を開始...")
         outputs = model(
-            request.prompt,
+            final_prompt,
             max_new_tokens=request.max_new_tokens,
             do_sample=request.do_sample,
             temperature=request.temperature,
@@ -184,7 +188,7 @@ async def generate_simple(request: SimpleGenerationRequest):
         print("モデル推論が完了しました。")
 
         # アシスタント応答を抽出
-        assistant_response = extract_assistant_response(outputs, request.prompt)
+        assistant_response = extract_assistant_response(outputs, final_prompt)
         print(f"抽出されたアシスタント応答: {assistant_response[:100]}...")  # 長い場合は切り捨て
 
         end_time = time.time()
