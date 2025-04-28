@@ -13,7 +13,7 @@ from pyngrok import ngrok
 
 # --- 設定 ---
 # モデル名を設定
-MODEL_NAME = "elyza/ELYZA-japanese-Llama-2-7b-instruct"  # モデル変更
+MODEL_NAME = "Qwen/Qwen1.5-1.8B-Chat"  # モデル変更
 print(f"モデル名を設定: {MODEL_NAME}")
 
 # --- モデル設定クラス ---
@@ -70,6 +70,7 @@ def load_model():
             "text-generation",
             model=config.MODEL_NAME,
             model_kwargs={"torch_dtype": torch.float16}, #model_kwargs={"torch_dtype": torch.bfloat16}
+            trust_remote_code=True
             device=device
         )
         print(f"モデル '{config.MODEL_NAME}' の読み込みに成功しました")
