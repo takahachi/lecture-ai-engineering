@@ -53,7 +53,7 @@ def train_and_evaluate(
 
 
 # モデル保存
-def log_model(model, accuracy, params):
+def log_model(model, accuracy, params, inference_time):
     with mlflow.start_run():
         # パラメータをログ
         for param_name, param_value in params.items():
@@ -61,6 +61,7 @@ def log_model(model, accuracy, params):
 
         # メトリクスをログ
         mlflow.log_metric("accuracy", accuracy)
+        mlflow.log_metric("inference_time", inference_time)
 
         # モデルのシグネチャを推論
         signature = infer_signature(X_train, model.predict(X_train))
@@ -74,6 +75,26 @@ def log_model(model, accuracy, params):
         )
         # accurecyとparmsは改行して表示
         print(f"モデルのログ記録値 \naccuracy: {accuracy}\nparams: {params}")
+
+        # MLflow の過去 run と今回の精度を比較
+        from mlflow.tracking import MlflowClient
+
+        client = MlflowClient()
+        experiment_id = client.get_experiment_by_name("Default").experiment_id
+        runs = client.search_runs(experiment_id, order_by=["start_time DESC"], max_results=2)
+
+
+        accuracy_drop_flag = 0
+        if len(runs) > 1:
+            prev_accuracy = runs[1].data.metrics.get("accuracy", None)
+            if prev_accuracy is not None and accuracy < prev_accuracy - 0.05:
+                print(f"精度が低下しています: 過去={prev_accuracy:.4f}, 今回={accuracy:.4f}")
+                accuracy_drop_flag = 1
+            else:
+                print(f"精度に問題なし: 過去={prev_accuracy:.4f}, 今回={accuracy:.4f}")
+                
+        #  精度低下フラグをログ
+        mlflow.log_metric("accuracy_drop_flag", accuracy_drop_flag)
 
 
 # メイン処理
@@ -112,8 +133,14 @@ if __name__ == "__main__":
         random_state=model_random_state,
     )
 
+    # 推論時間の測定
+    import time
+    start_time = time.time()
+    predictions = model.predict(X_test)
+    inference_time = time.time() - start_time
+
     # モデル保存
-    log_model(model, accuracy, params)
+    log_model(model, accuracy, params, inference_time)
 
     model_dir = "models"
     os.makedirs(model_dir, exist_ok=True)
